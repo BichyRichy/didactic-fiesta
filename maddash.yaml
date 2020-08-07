@@ -1,0 +1,67 @@
+database: /var/lib/maddash/ 
+serverHost: "localhost"
+http: 
+    port: 8881
+groups:
+    myThroughputHosts :
+        - "127.1.0.1"
+        - "127.1.0.2"
+        - "127.1.0.3"
+        - "127.1.0.4"
+groupMembers:
+checks:
+    throughputCheck :
+        added_by_psconfig: 1 
+        name: "Throughput"
+        description: "Throughput from %row to %col (according to %row MA)"
+        type: "net.es.maddash.checks.PSNagiosCheck"
+        params:
+            maUrl:
+                default: "http://172.17.0.3/esmond/perfsonar/archive/"
+            graphUrl: "http://192.168.1.81:8080/perfsonar-graphs/?url=%maUrl&dest=%col&source=%row"
+            command:  "/usr/lib64/nagios/plugins/check_throughput.pl -u %maUrl -w .1: -c .01: -r 86400 -s %row -d %col"
+        checkInterval: 240
+        retryInterval: 30
+        retryAttempts: 1
+        timeout: 60
+    throughputRevCheck :
+        added_by_psconfig: 1 
+        name: "Throughput Reverse"
+        description: "Throughput from %col to %row (according to %row MA)"
+        type: "net.es.maddash.checks.PSNagiosCheck"
+        params:
+            maUrl:
+                default: "http://172.17.0.3/esmond/perfsonar/archive/"
+            graphUrl: "http://192.168.1.81:8080/perfsonar-graphs/?url=%maUrl&dest=%row&source=%col"
+            command:  "/usr/lib64/nagios/plugins/check_throughput.pl -u %maUrl -w .1: -c .01: -r 86400 -s %col -d %row"
+        checkInterval: 240
+        retryInterval: 30
+        retryAttempts: 1
+        timeout: 60
+grids:
+    - name: "Throughput"
+      added_by_psconfig: 1
+      rows: "myThroughputHosts"
+      columns: "myThroughputHosts"
+      checks: 
+        - "throughputCheck"
+        - "throughputRevCheck"
+      rowOrder: "alphabetical"
+      colOrder: "alphabetical"
+      excludeSelf: 1
+      columnAlgorithm: "all" 
+      statusLabels:
+            ok: "Throughput >= 100Mbps"
+            warning: "Throughput >= 10Mbps"
+            critical: "Throughput < 10Mbps"
+            unknown: "Unable to retrieve data"
+            notrun: "Check has not yet run"
+            extra:
+                - value: 5
+                  shortName: EVENT
+                  description: "Down for maintenance"
+dashboards:
+    - name: "My Sites"
+      added_by_psconfig: 1 
+      grids:
+        - name: "Throughput"
